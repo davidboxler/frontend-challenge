@@ -1,26 +1,49 @@
-import { useRef } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Icon from "../assets/todo_icon.png";
-import { addPhrase, deletePhrase, setSearch } from "../store/phrasesSlice";
-import type { RootState } from "../store/store";
+import { useDebounce } from "../hooks/useDebounce";
+import { usePhrases } from "../hooks/usePhrases";
 import type { List } from "../types";
+import { enhanceText } from "../utils/enhanceText";
 import ListItem from "./ListItem";
 
 function AppList() {
   const inputRef = useRef<HTMLInputElement>(null);
-  const dispatch = useDispatch();
-  const { items, search } = useSelector((state: RootState) => state.phrases);
+  const { filteredItems, search, add, remove, updateSearch } = usePhrases();
 
-  const filteredItems = items.filter((item: List) =>
-    item.text.toLowerCase().includes(search.toLowerCase())
-  );
+  const [searchInput, setSearchInput] = useState(search);
+  const debouncedSearch = useDebounce(searchInput, 300);
 
-  const add = () => {
-    const inputText = inputRef.current?.value.trim();
-    if (!inputText) return;
-    dispatch(addPhrase(inputText));
+  useEffect(() => {
+    updateSearch(debouncedSearch);
+  }, [debouncedSearch, updateSearch]);
+
+  const handleAdd = () => {
+    const rawText = inputRef.current?.value ?? "";
+    const enhanced = enhanceText(rawText.trim());
+
+    if (!enhanced) {
+      alert("La frase no puede estar vacía.");
+      return;
+    }
+
+    const alreadyExists = filteredItems.some(
+      (item) => item.text.toLowerCase() === enhanced.toLowerCase()
+    );
+    if (alreadyExists) {
+      alert("Esa frase ya existe.");
+      return;
+    }
+
+    add(enhanced);
     if (inputRef.current) inputRef.current.value = "";
   };
+
+  const handleDelete = useCallback(
+    (id: number) => {
+      remove(id);
+    },
+    [remove]
+  );
 
   return (
     <div
@@ -45,7 +68,7 @@ function AppList() {
         <button
           className="border-none rounded-full bg-orange-600 
         w-32 h-14 text-white text-lg font-medium cursor-pointer"
-          onClick={add}
+          onClick={handleAdd}
         >
           Agregar +
         </button>
@@ -59,18 +82,14 @@ function AppList() {
           type="text"
           placeholder="Buscar frases..."
           value={search}
-          onChange={(e) => dispatch(setSearch(e.target.value))}
+          onChange={(e) => setSearchInput(e.target.value)}
         />
       </div>
 
       {/* Lista filtrada */}
       <div className="grid gap-3">
         {filteredItems.map((item: List) => (
-          <ListItem
-            key={item.id}
-            {...item}
-            deleteItem={(id) => dispatch(deletePhrase(id))}
-          />
+          <ListItem key={item.id} {...item} deleteItem={handleDelete} />
         ))}
       </div>
     </div>

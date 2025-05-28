@@ -1,5 +1,7 @@
-import tick from "../assets/tick.png";
+import { memo } from "react";
 import delete_icon from "../assets/delete.png";
+import tick from "../assets/tick.png";
+import withLogger from "../hoc/withLogger";
 import type { ListItemProps } from "../types";
 
 function ListItem({ text, id, deleteItem }: ListItemProps) {
@@ -11,15 +13,16 @@ function ListItem({ text, id, deleteItem }: ListItemProps) {
       </div>
 
       <img
-        onClick={() => {
-          deleteItem(id);
-        }}
+        onClick={() => deleteItem(id)}
         src={delete_icon}
-        alt=""
+        alt="boton eliminar frase"
+        aria-label="Eliminar"
         className="w-3.5 cursor-pointer"
       />
     </div>
   );
 }
 
-export default ListItem;
+const LoggedListItem = withLogger<ListItemProps>(ListItem);
+
+export default memo(LoggedListItem);
